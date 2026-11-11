@@ -11,6 +11,15 @@ final class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
     @Published var wave: [Int] = []
     private let waveLength = 1250
 
+    // 解析結果(画面表示用)
+    @Published var heartRate: Double? = nil        // 最新の拍の心拍数[bpm]
+    @Published var rir: Double? = nil              // 最新のRiR(まだ出ていなければ nil)
+    @Published var validSec: Double = 0            // RiRが出るまでに溜まった有効な拍の時間[秒]
+    @Published var quality: SignalQuality? = nil   // 信号品質
+    @Published var lostPackets = 0                 // 届かなかった心電パケットの数
+    let validSpan: Double = 120
+    private var session = EcgSession()
+
     private let relay: RelayClient
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
@@ -92,13 +101,33 @@ final class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
         status = "受信中"
     }
 
+    /// 心電パケット1つを解析に渡し、画面用の値を更新する。
+    private func analyze(_ pkt: EcgPacket) {
+        session.onPacket(pkt)
+        let e = session.ecg
+        if let last = e.beats.last {
+            heartRate = last.hrBpm
+            rir = last.rir
+        }
+        validSec = e.rir.validSec()
+        quality = e.quality()
+        lostPackets = session.lost
+    }
+
+    /// 解析をやり直す(別の人に付け替えたときなど)。
+    func resetAnalysis() {
+        session = EcgSession()
+        heartRate = nil; rir = nil; validSec = 0; quality = nil; lostPackets = 0
+        wave = []
+    }
+
     func peripheral(_ p: CBPeripheral, didUpdateValueFor ch: CBCharacteristic, error: Error?) {
         guard let kind = kinds[ch.uuid], let data = ch.value else { return }
         counts[kind, default: 0] += 1
-        if kind == 0x01, data.count >= 104 {
-            let b = [UInt8](data)
-            for i in 0..<50 { wave.append(Int(b[4 + 2*i]) | (Int(b[5 + 2*i]) << 8)) }
+        if kind == 0x01, let pkt = EcgPacket([UInt8](data)) {
+            wave.append(contentsOf: pkt.samples.map { $0 & 0x3FFF })
             if wave.count > waveLength { wave.removeFirst(wave.count - waveLength) }
+            analyze(pkt)
         }
         relay.send(kind: kind, packet: data)
     }

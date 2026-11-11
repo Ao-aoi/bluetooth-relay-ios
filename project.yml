@@ -7,7 +7,7 @@ targets:
   BluetoothRelay:
     type: application
     platform: iOS
-    sources: [Sources]
+    sources: [Sources, Analysis/Sources/EcgCore]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: jp.example.bluetoothrelay.app

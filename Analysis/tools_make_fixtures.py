@@ -62,6 +62,10 @@ with open(out / "expected_beats.csv", "w", encoding="utf-8", newline="\n") as fp
         fp.write(",".join([f(b["time_s"]), str(b["sample_index"]), f(b["RRI_ms"]), f(b["HR_bpm"]),
                            f(b["RiR"]), f(b["sumrir_per_span"]), f(b["La"])]) + "\n")
 
+q = e.quality()
+with open(out / "quality_case.txt", "w", encoding="utf-8", newline="\n") as fp:
+    fp.write(" ".join([repr(q["mains"]), repr(q["noise"]), repr(q["qrs"]), repr(q["rail"]), str(q["level"])]) + "\n")
+
 # 部品ごとの確認用: 帯域通過フィルタとピーク検出
 sig = (adc[2500:3500].astype(float) - 8192)
 sos = butter(3, [5 / 125, 25 / 125], btype="band", output="sos")

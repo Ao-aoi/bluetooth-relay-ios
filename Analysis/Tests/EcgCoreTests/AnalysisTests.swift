@@ -90,5 +90,14 @@ final class AnalysisTests: XCTestCase {
         }
         XCTAssertEqual(bad, 0, "一致しない拍の数")
         XCTAssertEqual(ecg.droppedClip, 2)
+
+        // 信号品質
+        let qw = readLines("quality_case.txt")[0].split(separator: " ")
+        let q = ecg.quality()!
+        XCTAssertTrue(close(q.mains, Double(qw[0])!), "50Hz混入 \(q.mains)")
+        XCTAssertTrue(close(q.noise, Double(qw[1])!), "雑音 \(q.noise)")
+        XCTAssertTrue(same(q.qrs, Double(qw[2])), "R波の振幅 \(String(describing: q.qrs))")
+        XCTAssertTrue(close(q.rail, Double(qw[3])!))
+        XCTAssertEqual(q.level, Int(qw[4])!)
     }
 }

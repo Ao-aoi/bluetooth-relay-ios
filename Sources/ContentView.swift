@@ -6,6 +6,20 @@ struct ContentView: View {
     @StateObject private var finder = PCFinder()
     @State private var host: String = UserDefaults.standard.string(forKey: "host") ?? ""
 
+    /// RiRの表示。まだ出ていない間は、あと何秒ぶんの拍が必要かを出す。
+    private var rirText: String {
+        if let r = ble.rir { return String(format: "%.3f", r) }
+        if ble.heartRate == nil { return "--" }
+        return String(format: "準備中(%.0f / %.0f 秒)", min(ble.validSec, ble.validSpan), ble.validSpan)
+    }
+
+    /// 信号品質の表示。50Hz混入の振幅で 良好 / 注意 / 不良 を分ける。
+    private var qualityText: String {
+        guard let q = ble.quality else { return "--" }
+        let label = ["良好", "注意", "不良"][q.level]
+        return "\(label)(50Hz混入 \(Int(q.mains.rounded())))"
+    }
+
     var body: some View {
         Form {
             Section("PC") {
@@ -33,6 +47,13 @@ struct ContentView: View {
                 LabeledContent("心電図", value: "\(ble.counts[0x01] ?? 0)")
                 LabeledContent("動き", value: "\(ble.counts[0x02] ?? 0)")
                 LabeledContent("5秒ごと", value: "\(ble.counts[0x03] ?? 0)")
+            }
+            Section("解析") {
+                LabeledContent("心拍数", value: ble.heartRate.map { String(format: "%.0f bpm", $0) } ?? "--")
+                LabeledContent("RiR", value: rirText)
+                LabeledContent("信号品質", value: qualityText)
+                LabeledContent("届かなかったパケット", value: "\(ble.lostPackets)")
+                Button("解析をやり直す") { ble.resetAnalysis() }
             }
             Section {
                 Text("使っている間は画面を点けたままにします。他の人の心電計に繋がないよう、近くの1台だけ電源を入れてください。")

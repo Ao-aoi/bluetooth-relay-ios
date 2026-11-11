@@ -19,9 +19,11 @@ public enum BeatCleaning {
     }
 
     /// ②直前の拍との間隔が短すぎる偽ピークを除く。
-    /// 条件: 間隔が 0.28秒 未満、または 過去の間隔の指数移動平均の 0.55倍 未満。振幅の小さい方を除く。
+    /// 条件: 間隔が minRRSec(既定 60/230 = 約0.26秒)未満、または 過去の間隔の指数移動平均の 0.55倍 未満。
+    /// 振幅の小さい方を除く。
     public static func sanitizeCausal(_ pk: [Int], amp: [Int: Double], fs: Int, maxRemoved: Int,
-                                      emaAlpha: Double = 0.15) -> [Int] {
+                                      emaAlpha: Double = 0.15,
+                                      minRRSec: Double = 60.0 / RiRConst.maxHR) -> [Int] {
         var kept = [pk[0]]
         var ema: Double? = nil
         var removed = 0
@@ -31,7 +33,7 @@ public enum BeatCleaning {
             while true {
                 rrNew = Double(p0 - kept[kept.count - 1]) / Double(fs)
                 if ema == nil { ema = rrNew }
-                let tooShort = rrNew < max(0.28, 0.55 * ema!)
+                let tooShort = rrNew < max(minRRSec, 0.55 * ema!)
                 if !(tooShort && removed < maxRemoved && kept.count >= 2) { break }
                 if amp[kept[kept.count - 1]]! < amp[p0]! {
                     kept.removeLast()

@@ -143,6 +143,44 @@ public final class RealtimeECG {
     }
 }
 
+/// 信号品質(電極の接触の目安)。
+public struct SignalQuality {
+    public var mains: Double     // 50Hz混入の振幅[カウント](直近4秒)
+    public var noise: Double     // 5〜25Hz帯の雑音
+    public var qrs: Double?      // 直近のR波の振幅の中央値
+    public var rail: Double      // 記録値が上下限に張り付いた割合
+    public var level: Int        // 0=良好 / 1=注意 / 2=不良
+}
+
+extension RealtimeECG {
+    /// 直近の信号品質。データが足りないうちは nil。
+    /// 判定: 50Hz混入の振幅が 20 未満=良好、200 未満=注意、それ以上=不良(Python版と同じ基準)。
+    public func quality() -> SignalQuality? {
+        if adc.count < 1000 || f.count < 500 { return nil }
+        let a = Array(adc[(adc.count - 1000)...])
+        let mean = a.reduce(0, +) / 1000
+        // 50Hz成分の大きさ(250Hz・1000点では200番目の周波数成分)。窓関数はハン窓
+        var re = 0.0, im = 0.0, hsum = 0.0
+        for i in 0..<1000 {
+            let h = 0.5 - 0.5 * cos(2 * Double.pi * Double(i) / 999)
+            let v = (a[i] - mean) * h
+            let ang = 2 * Double.pi * 200 * Double(i) / 1000
+            re += v * cos(ang)
+            im -= v * sin(ang)
+            hsum += h
+        }
+        let mains = 2 * (re * re + im * im).squareRoot() / hsum
+        let ft = Array(f[(f.count - 1000)...])
+        let fm = median(ft)
+        let noise = median(ft.map { abs($0 - fm) })
+        let recent = kept.suffix(10).compactMap { amp[$0] }
+        let qrs: Double? = recent.isEmpty ? nil : median(recent)
+        let rail = Double(a.filter { $0 <= 1 || $0 >= 16382 }.count) / 1000
+        let level = mains < 20 ? 0 : (mains < 200 ? 1 : 2)
+        return SignalQuality(mains: mains, noise: noise, qrs: qrs, rail: rail, level: level)
+    }
+}
+
 /// パケット単位の入口。本体時刻から欠落を見つけて RealtimeECG に伝える
 /// (Python版 realtime/session.py の _on_ecg と同じ手順)。
 public final class EcgSession {
