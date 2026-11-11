@@ -22,8 +22,8 @@ struct ContentView: View {
                 LabeledContent("ためてある数", value: "\(relay.bufferedCount)")
                 LabeledContent("PCへ送った数", value: "\(relay.sentCount)")
             }
-            Section("kokolog") {
-                Button(ble.scanning ? "探すのを止める" : "kokologを探して接続") {
+            Section("心電計") {
+                Button(ble.scanning ? "探すのを止める" : "心電計を探して接続") {
                     ble.scanning ? ble.stop() : ble.start()
                 }
                 Text(ble.status)
@@ -32,7 +32,7 @@ struct ContentView: View {
                 LabeledContent("5秒ごと", value: "\(ble.counts[0x03] ?? 0)")
             }
             Section {
-                Text("使っている間は画面を点けたままにします。他の人のkokologに繋がないよう、近くの1台だけ電源を入れてください。")
+                Text("使っている間は画面を点けたままにします。他の人の心電計に繋がないよう、近くの1台だけ電源を入れてください。")
                     .font(.footnote)
             }
         }

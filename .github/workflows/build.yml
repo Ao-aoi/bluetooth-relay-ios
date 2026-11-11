@@ -13,15 +13,15 @@ jobs:
           xcodegen generate
       - name: 署名なしでビルド
         run: |
-          xcodebuild -project KokologRelay.xcodeproj -scheme KokologRelay \
+          xcodebuild -project BluetoothRelay.xcodeproj -scheme BluetoothRelay \
             -configuration Release -sdk iphoneos -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
       - name: IPAにまとめる
         run: |
           mkdir Payload
-          cp -R build/Build/Products/Release-iphoneos/KokologRelay.app Payload/
-          zip -qr KokologRelay.ipa Payload
+          cp -R build/Build/Products/Release-iphoneos/BluetoothRelay.app Payload/
+          zip -qr BluetoothRelay.ipa Payload
       - uses: actions/upload-artifact@v4
         with:
-          name: KokologRelay-ipa
-          path: KokologRelay.ipa
+          name: BluetoothRelay-ipa
+          path: BluetoothRelay.ipa

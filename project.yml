@@ -1,16 +1,16 @@
-name: KokologRelay
+name: BluetoothRelay
 options:
-  bundleIdPrefix: jp.example.kokologrelay
+  bundleIdPrefix: jp.example.bluetoothrelay
   deploymentTarget:
     iOS: "16.0"
 targets:
-  KokologRelay:
+  BluetoothRelay:
     type: application
     platform: iOS
     sources: [Sources]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: jp.example.kokologrelay.app
+        PRODUCT_BUNDLE_IDENTIFIER: jp.example.bluetoothrelay.app
         MARKETING_VERSION: "0.1"
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: NO

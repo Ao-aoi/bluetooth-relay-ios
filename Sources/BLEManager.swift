@@ -1,7 +1,7 @@
 import Foundation
 import CoreBluetooth
 
-/// kokologの通知(心電図・動き・5秒ごと)を購読し、受け取ったバイト列を加工せずに RelayClient へ渡す。
+/// 心電計の通知(心電図・動き・5秒ごと)を購読し、受け取ったバイト列を加工せずに RelayClient へ渡す。
 /// 書き込みは一切しない。
 final class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     @Published var status = "待機中"
@@ -22,7 +22,7 @@ final class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
         self.relay = relay
         super.init()
         central = CBCentralManager(delegate: self, queue: .main,
-                                   options: [CBCentralManagerOptionRestoreIdentifierKey: "kokolog-relay"])
+                                   options: [CBCentralManagerOptionRestoreIdentifierKey: "bluetooth-relay"])
     }
 
     func start() {
@@ -30,7 +30,7 @@ final class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
         guard central.state == .poweredOn else { status = "Bluetoothをオンにしてください"; return }
         if let p = peripheral { central.connect(p); status = "再接続中..."; scanning = true; return }
         scanning = true
-        status = "kokologを探しています..."
+        status = "心電計を探しています..."
         central.scanForPeripherals(withServices: nil, options: nil)
     }
 
