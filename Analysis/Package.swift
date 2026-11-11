@@ -8,6 +8,6 @@ let package = Package(
         .target(name: "EcgCore"),
         // Windowsで動かす確認用プログラム
         .executableTarget(name: "ecgcheck", dependencies: ["EcgCore"]),
-        .testTarget(name: "EcgCoreTests", dependencies: ["EcgCore"]),
+        .testTarget(name: "EcgCoreTests", dependencies: ["EcgCore"], exclude: ["Fixtures"]),
     ]
 )

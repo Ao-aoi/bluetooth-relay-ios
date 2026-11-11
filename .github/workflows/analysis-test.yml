@@ -1,0 +1,13 @@
+name: analysis-test
+on:
+  push:
+    paths: ['Analysis/**', '.github/workflows/analysis-test.yml']
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: swift:6.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: 解析部のテスト(Python版の結果と比べる)
+        run: cd Analysis && swift test
