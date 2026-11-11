@@ -15,6 +15,7 @@
   <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
   <key>NSBluetoothAlwaysUsageDescription</key><string>心電計の心電データを受け取るためにBluetoothを使います。</string>
   <key>NSLocalNetworkUsageDescription</key><string>受け取ったデータを同じネットワーク内のPCへ送ります。</string>
+  <key>NSBonjourServices</key><array><string>_btrelay._tcp</string></array>
   <key>UIBackgroundModes</key><array><string>bluetooth-central</string></array>
   <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
 </dict></plist>
