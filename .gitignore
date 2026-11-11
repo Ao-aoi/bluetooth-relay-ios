@@ -1,2 +1,5 @@
 .build/
 *.ipa
+relay_*.jsonl
+*.csv
+!Analysis/Tests/EcgCoreTests/Fixtures/*.csv
