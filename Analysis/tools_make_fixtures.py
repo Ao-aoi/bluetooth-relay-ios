@@ -66,6 +66,52 @@ q = e.quality()
 with open(out / "quality_case.txt", "w", encoding="utf-8", newline="\n") as fp:
     fp.write(" ".join([repr(q["mains"]), repr(q["noise"]), repr(q["qrs"]), repr(q["rail"]), str(q["level"])]) + "\n")
 
+# 状態(静止/軽い動き/運動)の確認用: 作り物のジャイロと上の心電図を、パケットの形で順に流す
+# (realtime/session.py の _on_ecg / _on_gyro と同じ手順)
+from realtime.activity import ActivityEstimator, STATES  # noqa: E402
+from realtime.sources import timecode, dt_sec, parse_gyro_packet  # noqa: E402
+
+def stamp(i, offset256=0):
+    """i 番目のパケットの本体時刻(20:00:00 から0.2秒ごと)を4バイトにする。"""
+    v = 72000 * 256 + (i * 256) // 5 + offset256
+    return bytes([v // (3600 * 256), v // (60 * 256) % 60, v // 256 % 60, v % 256])
+
+SKIP_ECG = set(range(1200, 1202)) | set(range(1800, 1808))     # 届かなかった心電パケット
+g_rng = np.random.default_rng(12)
+gyro_bin = bytearray()
+e2 = RealtimeECG(); act = ActivityEstimator(); last = None; rows = []
+for i in range(n // 50):
+    sec = i * 0.2
+    if not (500 <= sec < 506):                                 # ジャイロが届かない区間
+        sd = 60.0
+        if 60 <= sec < 90 or 280 <= sec < 300:
+            sd = 300.0                                         # 軽い動き
+        if 120 <= sec < 150:
+            sd = 1200.0                                        # 大きい動き
+        vals = np.clip(np.round(32768 + g_rng.normal(0, sd, 18)), 0, 65535).astype("<u2")
+        pkt = stamp(i, 13) + vals.tobytes() + b"\x00"
+        gyro_bin += pkt
+        act.add_gyro(*parse_gyro_packet(pkt))
+    if i in SKIP_ECG:
+        continue
+    tdev = timecode(stamp(i))
+    if last is not None:
+        gap = dt_sec(tdev, last)
+        miss = int(round(gap / 0.2)) - 1
+        if miss > 0:
+            e2.gap(50 * miss)
+    last = tdev
+    e2.push(adc[i * 50:(i + 1) * 50])
+    q2 = e2.quality()
+    st, _ = act.update(tdev, e2.beats, e2.n / fs, signal_bad=bool(q2.get("ok") and q2["level"] == 2))
+    rows.append((i, STATES.index(st), act.motion, act.hr, int(act.hr_ok)))
+(out / "gyro_case.bin").write_bytes(bytes(gyro_bin))
+with open(out / "activity_expected.csv", "w", encoding="utf-8", newline="\n") as fp:
+    fp.write("packet,state,motion,hr,hr_ok\n")
+    for r_ in rows:
+        fp.write(",".join([str(r_[0]), str(r_[1]), f(r_[2]), f(r_[3]), str(r_[4])]) + "\n")
+print("状態の内訳", {STATES[k]: sum(1 for r_ in rows if r_[1] == k) for k in range(4)})
+
 # 部品ごとの確認用: 帯域通過フィルタとピーク検出
 sig = (adc[2500:3500].astype(float) - 8192)
 sos = butter(3, [5 / 125, 25 / 125], btype="band", output="sos")

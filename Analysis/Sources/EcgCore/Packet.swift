@@ -12,3 +12,16 @@ public struct EcgPacket {
         samples = (0..<50).map { i in Int(d[4 + 2*i]) | (Int(d[5 + 2*i]) << 8) }
     }
 }
+
+/// 心電計の動きのパケット(41バイト)を読む。
+/// 先頭4バイト: 本体時刻、続く36バイト: 18個(uint16、リトルエンディアン。6サンプル×3軸)。
+public struct GyroPacket {
+    public let seconds: Double
+    public let values: [Int]
+
+    public init?(_ d: [UInt8]) {
+        guard d.count >= 40 else { return nil }
+        seconds = Double(d[0]) * 3600 + Double(d[1]) * 60 + Double(d[2]) + Double(d[3]) / 256
+        values = (0..<18).map { i in Int(d[4 + 2*i]) | (Int(d[5 + 2*i]) << 8) }
+    }
+}

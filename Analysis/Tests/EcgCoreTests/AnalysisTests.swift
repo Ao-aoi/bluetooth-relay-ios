@@ -100,4 +100,50 @@ final class AnalysisTests: XCTestCase {
         XCTAssertTrue(close(q.rail, Double(qw[3])!))
         XCTAssertEqual(q.level, Int(qw[4])!)
     }
+
+    /// 状態(安静/軽い動き/運動)。心電図とジャイロをパケットの形で順に流し、Python版の結果と比べる。
+    func testActivity() {
+        func stamp(_ i: Int, _ offset: Int = 0) -> [UInt8] {
+            let v = 72000 * 256 + (i * 256) / 5 + offset
+            return [UInt8(v / (3600 * 256)), UInt8(v / (60 * 256) % 60), UInt8(v / 256 % 60), UInt8(v % 256)]
+        }
+        let b = [UInt8](FileManager.default.contents(atPath: fixture("synthetic.ecg"))!)
+        let gy = [UInt8](FileManager.default.contents(atPath: fixture("gyro_case.bin"))!)
+        var gyro = [[UInt8]: [UInt8]]()            // 本体時刻4バイト → パケット
+        for k in 0..<(gy.count / 41) {
+            let pkt = Array(gy[(k * 41)..<((k + 1) * 41)])
+            gyro[Array(pkt[0..<4])] = pkt
+        }
+        var skip = Set(1200..<1202)                // tools_make_fixtures.py の SKIP_ECG と同じ
+        skip.formUnion(1800..<1808)
+        let states: [ActivityState] = [.rest, .light, .exercise, .unknown]
+        let want = readLines("activity_expected.csv").dropFirst().map {
+            $0.split(separator: ",", omittingEmptySubsequences: false)
+        }
+        let session = EcgSession()
+        var row = 0
+        var bad = 0
+        var seen = Set<String>()
+        for i in 0..<(b.count / 2 / 50) {
+            if let g = gyro[stamp(i, 13)] { session.onGyro(GyroPacket(g)!) }
+            if skip.contains(i) { continue }
+            let bytes = stamp(i) + Array(b[(i * 100)..<((i + 1) * 100)]) + [0]
+            session.onPacket(EcgPacket(bytes)!)
+            let w = want[row]
+            row += 1
+            let a = session.activity
+            let ok = Int(w[0])! == i && a.state == states[Int(w[1])!]
+                && same(a.motion.isNaN ? nil : a.motion, cell(w[2]))
+                && same(a.hr.isNaN ? nil : a.hr, cell(w[3])) && a.hrOk == (w[4] == "1")
+            if !ok {
+                bad += 1
+                if bad <= 5 { print("状態の不一致 \(i): Swift=\(a.state) \(a.motion) \(a.hr) 正解=\(w.joined(separator: ","))") }
+            }
+            seen.insert(a.state.rawValue)
+        }
+        XCTAssertEqual(row, want.count)
+        XCTAssertEqual(bad, 0, "一致しないパケットの数")
+        XCTAssertEqual(seen.count, 4, "4つの状態がすべて出ること")
+        XCTAssertEqual(session.lost, 10)
+    }
 }

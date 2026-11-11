@@ -12,7 +12,7 @@ public final class RealtimeECG {
     var maHist = [Double](repeating: 0, count: 4)
     public private(set) var n = 0            // これまでに受け取ったサンプル数
     public private(set) var f = [Double]()   // 直近 win のフィルタ後の波形
-    var adc = [Double]()         // 直近 win の記録値
+    public private(set) var adc = [Double]()   // 直近 win の記録値
     var fOff = 0                 // f[0] の通し番号
     var lastConf = -1_000_000_000
     var cand = [Int]()           // ①の後に残ったピーク
@@ -181,10 +181,11 @@ extension RealtimeECG {
     }
 }
 
-/// パケット単位の入口。本体時刻から欠落を見つけて RealtimeECG に伝える
+/// パケット単位の入口。本体時刻から欠落を見つけて RealtimeECG に伝え、状態(安静/軽い動き/運動)も更新する
 /// (Python版 realtime/session.py の _on_ecg と同じ手順)。
 public final class EcgSession {
     public let ecg: RealtimeECG
+    public let activity = ActivityEstimator()
     var lastDevTime: Double? = nil
     public private(set) var packets = 0
     public private(set) var lost = 0
@@ -205,5 +206,11 @@ public final class EcgSession {
         lastDevTime = p.seconds
         ecg.push(p.samples)
         packets += 1
+        activity.update(time: p.seconds, beats: ecg.beats, nowS: Double(ecg.n) / Double(ecg.fs),
+                        signalBad: ecg.quality()?.level == 2)
+    }
+
+    public func onGyro(_ p: GyroPacket) {
+        activity.addGyro(time: p.seconds, values: p.values)
     }
 }
