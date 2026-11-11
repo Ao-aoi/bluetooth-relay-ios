@@ -8,6 +8,7 @@ struct SettingsTab: View {
     @AppStorage("useSwiftCharts") private var useSwiftCharts = false
     @AppStorage("autoScanDevice") private var autoScanDevice = false
     @AppStorage("autoFindPC") private var autoFindPC = false
+    @AppStorage("deviceLabel") private var deviceLabel = ""
     @State private var rangeText = ""
     @State private var hr0 = ""
     @State private var intSpan = ""
@@ -52,6 +53,11 @@ struct SettingsTab: View {
                     Text("Canvas").tag(false)
                     Text("Swift Charts").tag(true)
                 }
+            }
+            Section("PCの画面に出す名前") {
+                TextField(UIDevice.current.name, text: $deviceLabel)
+                    .autocorrectionDisabled()
+                    .submitLabel(.done)
             }
             Section("起動時") {
                 Toggle("心電計を探す", isOn: $autoScanDevice)

@@ -13,7 +13,7 @@ struct ContentView: View {
         TabView {
             AnalysisTab(model: model)
                 .tabItem { Label("解析", systemImage: "chart.xyaxis.line") }
-            ConnectionTab(relay: relay, ble: ble, model: model, finder: finder)
+            ConnectionTab(relay: relay, ble: ble, model: model, mirror: model.mirror, finder: finder)
                 .tabItem { Label("接続", systemImage: "antenna.radiowaves.left.and.right") }
             SettingsTab(model: model)
                 .tabItem { Label("設定", systemImage: "gearshape") }
@@ -22,9 +22,6 @@ struct ContentView: View {
             UIApplication.shared.isIdleTimerDisabled = true   // 使っている間は画面を消さない
             if autoFindPC { finder.search() }
             if autoScanDevice { ble.start() }
-        }
-        .onReceive(finder.$found) { ip in
-            if let ip { UserDefaults.standard.set(ip, forKey: "host") }
         }
     }
 }
