@@ -12,11 +12,11 @@ jobs:
         with:
           python-version: '3.12'
       - name: 必要なものを入れる
-        run: pip install websockets zeroconf matplotlib pyinstaller
-      - name: exeを作る(Pythonが入っていないPCでも動く)
+        run: pip install websockets zeroconf matplotlib nuitka
+      - name: exeを作る(Nuitka。Pythonが入っていないPCでも動く)
         run: |
-          pyinstaller --onefile --name pc_monitor --hidden-import zeroconf._utils.ipaddress --hidden-import zeroconf._handlers.answers pc_monitor.py
-          pyinstaller --onefile --name pc_receiver --hidden-import zeroconf._utils.ipaddress --hidden-import zeroconf._handlers.answers pc_receiver.py
+          python -m nuitka --onefile --assume-yes-for-downloads --enable-plugin=matplotlib --include-package=zeroconf --include-package=websockets --output-dir=dist pc_monitor.py
+          python -m nuitka --onefile --assume-yes-for-downloads --include-package=zeroconf --include-package=websockets --output-dir=dist pc_receiver.py
       - uses: actions/upload-artifact@v4
         with:
           name: pc-tools-windows
