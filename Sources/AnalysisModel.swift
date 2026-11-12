@@ -59,6 +59,11 @@ final class AnalysisModel: ObservableObject {
     @Published private(set) var lostPackets = 0
     @Published private(set) var elapsed = 0.0           // 測定開始からの経過秒
     @Published private(set) var settings: AnalysisSettings
+    @Published private(set) var loading: Double? = nil  // 記録を読み込み中なら進み具合(0〜1)
+    @Published private(set) var resumedNote = ""         // 前の記録の続きから始めたときの説明
+
+    let recorder = Recorder()
+    private var pending: [(UInt8, Data)] = []   // 読み込み中に届いたパケット
 
     let waveStore = WaveStore()
     let mirror = MirrorClient()
@@ -74,6 +79,7 @@ final class AnalysisModel: ObservableObject {
         let s = AnalysisSettings.load()
         settings = s
         session = AnalysisModel.makeSession(s)
+        resumeIfRecent()
         mirror.onOpen = { [weak self] in
             guard let self else { return }
             self.mirrored = max(0, self.points.count - AnalysisModel.mirrorHistory)
@@ -112,7 +118,49 @@ final class AnalysisModel: ObservableObject {
         EcgSession(ecg: RealtimeECG(hr0: s.hr0, validSpan: s.validSpan, intSpan: s.intSpan, sumrirSpan: s.sumrirSpan))
     }
 
-    func onEcg(_ pkt: EcgPacket) {
+    /// 心電計から届いたパケット(心電・動き)。記録ファイルに書き、解析に渡す。
+    func receive(kind: UInt8, data: Data) {
+        if loading != nil { pending.append((kind, data)); return }
+        recorder.write(kind: kind, data)
+        if kind == 0x01, let p = EcgPacket([UInt8](data)) { onEcg(p) }
+        else if kind == 0x02, let p = GyroPacket([UInt8](data)) { onGyro(p) }
+    }
+
+    /// 最後の記録が設定の時間(既定5分)以内なら、その記録を流し直して続きから始める。
+    private func resumeIfRecent() {
+        let minutes = UserDefaults.standard.object(forKey: "resumeMinutes") as? Double ?? 5
+        guard minutes > 0, let last = RecordStore.list().first,
+              Date().timeIntervalSince(last.modified) <= minutes * 60 else { return }
+        let f = DateFormatter(); f.dateFormat = "H:mm"
+        load(last.url, note: "\(f.string(from: last.start)) からの記録の続き")
+    }
+
+    /// 記録ファイルを流し直して解析を作り直し、そのファイルに続けて記録する。
+    private func load(_ url: URL, note: String) {
+        guard let data = try? Data(contentsOf: url) else { return }
+        loading = 0
+        let s = AnalysisModel.makeSession(settings)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            Recording.replay([UInt8](data), into: s) { p in
+                DispatchQueue.main.async { if self?.loading != nil { self?.loading = p } }
+            }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.session = s
+                self.copied = 0
+                self.points = []
+                self.recorder.resume(url)
+                self.loading = nil
+                self.resumedNote = note
+                self.publish()
+                let p = self.pending
+                self.pending = []
+                for (k, d) in p { self.receive(kind: k, data: d) }
+            }
+        }
+    }
+
+    private func onEcg(_ pkt: EcgPacket) {
         session.onPacket(pkt)
         let e = session.ecg
         let a = e.adc.suffix(AnalysisModel.waveLength)
@@ -122,7 +170,7 @@ final class AnalysisModel: ObservableObject {
         if sincePublish >= 5 { publish() }      // 心電パケットは0.2秒ごとなので、5個で1秒
     }
 
-    func onGyro(_ pkt: GyroPacket) {
+    private func onGyro(_ pkt: GyroPacket) {
         session.onGyro(pkt)
     }
 
@@ -146,12 +194,24 @@ final class AnalysisModel: ObservableObject {
         sendMirror()
     }
 
-    /// 解析を最初からやり直す。設定を渡すと、その設定に変えてからやり直す。
-    func restart(with new: AnalysisSettings? = nil) {
-        if let new {
-            settings = new
-            new.save()
+    /// 設定を変えて、今の記録を最初から解析し直す(記録は消さない)。
+    func reanalyze(with new: AnalysisSettings) {
+        settings = new
+        new.save()
+        guard loading == nil else { return }
+        if let u = recorder.url {
+            recorder.close()
+            load(u, note: resumedNote)
+        } else {
+            restart()
         }
+    }
+
+    /// 解析を最初からやり直す。次に届いたパケットからは新しい記録ファイルに書く(前の記録は履歴に残る)。
+    func restart() {
+        guard loading == nil else { return }
+        recorder.close()
+        resumedNote = ""
         session = AnalysisModel.makeSession(settings)
         copied = 0
         sincePublish = 0

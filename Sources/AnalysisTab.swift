@@ -85,6 +85,12 @@ struct AnalysisTab: View {
 
     var body: some View {
         VStack(spacing: 6) {
+            if let p = model.loading {
+                ProgressView("前の記録を読み込み中", value: p).font(.caption)
+            } else if !model.resumedNote.isEmpty {
+                Text(model.resumedNote).font(.caption).foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             header("心拍数", hrText)
             line({ $0.hr }, hrRange, 20, .red)
             header("RiR", rirText)
@@ -131,11 +137,11 @@ struct AnalysisTab: View {
         .padding(.top, 8)
         .ignoresSafeArea(.keyboard)
         .onReceive(model.$settings) { hr0Text = String(format: "%.0f", $0.hr0) }
-        .alert("安静時心拍を変えると、解析を最初からやり直します", isPresented: $askRestart) {
+        .alert("安静時心拍を変えて、今の記録を最初から解析し直します", isPresented: $askRestart) {
             Button("変更する") {
                 var s = model.settings
                 s.hr0 = Double(hr0Text) ?? s.hr0
-                model.restart(with: s)
+                model.reanalyze(with: s)
             }
             Button("やめる", role: .cancel) { hr0Text = String(format: "%.0f", model.settings.hr0) }
         }

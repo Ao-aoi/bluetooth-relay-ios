@@ -146,4 +146,25 @@ final class AnalysisTests: XCTestCase {
         XCTAssertEqual(seen.count, 4, "4つの状態がすべて出ること")
         XCTAssertEqual(session.lost, 10)
     }
+
+    /// 記録ファイルに書いて流し直すと、直接受信したときと同じ結果になること。末尾が切れていても読めること。
+    func testRecordingReplay() {
+        let b = [UInt8](FileManager.default.contents(atPath: fixture("synthetic.ecg"))!)
+        let direct = EcgSession()
+        var file = [UInt8]()
+        for i in 0..<1500 {
+            let v = 72000 * 256 + (i * 256) / 5
+            let stamp: [UInt8] = [UInt8(v / (3600 * 256)), UInt8(v / (60 * 256) % 60), UInt8(v / 256 % 60), UInt8(v % 256)]
+            let pkt = stamp + Array(b[(i * 100)..<((i + 1) * 100)]) + [0]
+            direct.onPacket(EcgPacket(pkt)!)
+            file += Recording.encode(kind: 0x01, pkt)
+        }
+        file += [0x01, 105, 1, 2, 3]          // 書き込みの途中で終了された件
+        let again = EcgSession()
+        Recording.replay(file, into: again)
+        XCTAssertGreaterThan(direct.ecg.beats.count, 100)
+        XCTAssertEqual(again.ecg.beats.count, direct.ecg.beats.count)
+        XCTAssertEqual(again.ecg.beats.last?.sampleIndex, direct.ecg.beats.last?.sampleIndex)
+        XCTAssertEqual(again.packets, 1500)
+    }
 }

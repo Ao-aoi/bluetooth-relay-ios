@@ -12,6 +12,8 @@
   <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
   <key>LSRequiresIPhoneOS</key><true/>
   <key>UILaunchScreen</key><dict/>
+  <key>UIFileSharingEnabled</key><true/>
+  <key>LSSupportsOpeningDocumentsInPlace</key><true/>
   <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
   <key>NSBluetoothAlwaysUsageDescription</key><string>心電計の心電データを受け取るためにBluetoothを使います。</string>
   <key>NSLocalNetworkUsageDescription</key><string>受け取ったデータを同じネットワーク内のPCへ送ります。</string>

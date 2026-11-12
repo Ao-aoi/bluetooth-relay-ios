@@ -111,11 +111,7 @@ final class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
         }
         guard let kind = kinds[ch.uuid], let data = ch.value else { return }
         counts[kind, default: 0] += 1
-        if kind == 0x01, let pkt = EcgPacket([UInt8](data)) {
-            analysis.onEcg(pkt)
-        } else if kind == 0x02, let pkt = GyroPacket([UInt8](data)) {
-            analysis.onGyro(pkt)
-        }
+        if kind == 0x01 || kind == 0x02 { analysis.receive(kind: kind, data: data) }
         relay.send(kind: kind, packet: data)
     }
 }

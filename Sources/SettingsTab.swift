@@ -10,6 +10,8 @@ struct SettingsTab: View {
     @AppStorage("autoFindPC") private var autoFindPC = false
     @AppStorage("deviceLabel") private var deviceLabel = ""
     @State private var rangeText = ""
+    @AppStorage("resumeMinutes") private var resumeMinutes = 5.0
+    @State private var resumeText = ""
     @State private var hr0 = ""
     @State private var intSpan = ""
     @State private var validSpan = ""
@@ -59,6 +61,12 @@ struct SettingsTab: View {
                     .autocorrectionDisabled()
                     .submitLabel(.done)
             }
+            Section("記録") {
+                field("続きとして扱う間隔 [分]", $resumeText)
+                    .onChange(of: resumeText) { t in
+                        if let v = Double(t), v >= 0, v <= 1440 { resumeMinutes = v }
+                    }
+            }
             Section("起動時") {
                 Toggle("心電計を探す", isOn: $autoScanDevice)
                 Toggle("PCを探す", isOn: $autoFindPC)
@@ -68,23 +76,26 @@ struct SettingsTab: View {
                 field("平均する時間 [秒]", $intSpan)
                 field("有効になるまでの時間 [秒]", $validSpan)
                 field("ΣRiRの積算時間 [秒]", $sumrirSpan)
-                Button("この値で解析をやり直す") { askApply = true }
+                Button("この値で今の記録を解析し直す") { askApply = true }
                     .disabled(draft == nil || draft == model.settings)
                 Button("既定値に戻す") { fill(AnalysisSettings()) }
             }
             Section {
-                Button("解析をやり直す", role: .destructive) { askRestart = true }
+                Button("新しい記録を始める", role: .destructive) { askRestart = true }
             }
         }
         .scrollDismissesKeyboard(.interactively)
         .onReceive(model.$settings) { fill($0) }
-        .onAppear { rangeText = String(format: "%g", rangeMinutes) }
-        .alert("解析を最初からやり直します", isPresented: $askApply) {
-            Button("やり直す") { if let d = draft { model.restart(with: d) } }
+        .onAppear {
+            rangeText = String(format: "%g", rangeMinutes)
+            resumeText = String(format: "%g", resumeMinutes)
+        }
+        .alert("今の記録を、新しい設定で最初から解析し直します", isPresented: $askApply) {
+            Button("やり直す") { if let d = draft { model.reanalyze(with: d) } }
             Button("やめる", role: .cancel) {}
         }
-        .alert("解析の途中経過とグラフを消します", isPresented: $askRestart) {
-            Button("消してやり直す", role: .destructive) { model.restart() }
+        .alert("今の記録を終えて、新しい記録を始めます。今の記録は履歴タブに残ります", isPresented: $askRestart) {
+            Button("新しい記録を始める", role: .destructive) { model.restart() }
             Button("やめる", role: .cancel) {}
         }
     }
