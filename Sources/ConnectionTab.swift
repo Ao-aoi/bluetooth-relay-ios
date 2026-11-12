@@ -17,6 +17,7 @@ struct ConnectionTab: View {
                     ble.scanning ? ble.stop() : ble.start()
                 }
                 LabeledContent("心電計", value: ble.deviceName.isEmpty ? "--" : ble.deviceName)
+                LabeledContent("製造番号", value: ble.serial.isEmpty ? "--" : ble.serial)
                 Text(ble.status)
                 WaveView(store: model.waveStore, length: AnalysisModel.waveLength)
                 Text("▼ は検出したR波").font(.caption).foregroundColor(.secondary)

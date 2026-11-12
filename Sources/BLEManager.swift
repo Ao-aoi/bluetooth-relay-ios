@@ -7,7 +7,8 @@ import CoreBluetooth
 final class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     @Published var status = "待機中"
     @Published var scanning = false
-    @Published var deviceName = ""   // 接続中の心電計の名前(例 kokolog0111)
+    @Published var deviceName = ""   // 接続中の心電計の名前
+    @Published var serial = ""       // 接続中の心電計の製造番号(0031 の読み出し値から)
     @Published var counts: [UInt8: Int] = [:]
 
     private let analysis: AnalysisModel
@@ -19,6 +20,8 @@ final class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
     private func uuid(_ s: String) -> CBUUID { CBUUID(string: "0e97\(s)-ec52-42ce-9075-c027350fb893") }
     private lazy var svcMain = uuid("0010")   // 0011 ECG, 0012 motion
     private lazy var svcMisc = uuid("0020")   // 0021 (5秒ごと)
+    private lazy var svcInfo = uuid("0030")   // 0031 機器情報(読み出しのみ)
+    private lazy var chInfo = uuid("0031")
     private lazy var kinds: [CBUUID: UInt8] = [uuid("0011"): 0x01, uuid("0012"): 0x02, uuid("0021"): 0x03]
 
     init(relay: RelayClient, analysis: AnalysisModel) {
@@ -70,7 +73,8 @@ final class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
 
     func centralManager(_ c: CBCentralManager, didConnect p: CBPeripheral) {
         status = "接続しました。サービスを調べています..."
-        p.discoverServices([svcMain, svcMisc])
+        serial = ""
+        p.discoverServices([svcMain, svcMisc, svcInfo])
     }
 
     func centralManager(_ c: CBCentralManager, didFailToConnect p: CBPeripheral, error: Error?) {
@@ -84,17 +88,27 @@ final class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
     }
 
     func peripheral(_ p: CBPeripheral, didDiscoverServices error: Error?) {
-        for s in p.services ?? [] { p.discoverCharacteristics(Array(kinds.keys), for: s) }
+        for s in p.services ?? [] { p.discoverCharacteristics(Array(kinds.keys) + [chInfo], for: s) }
     }
 
     func peripheral(_ p: CBPeripheral, didDiscoverCharacteristicsFor s: CBService, error: Error?) {
         for ch in s.characteristics ?? [] where kinds[ch.uuid] != nil && ch.properties.contains(.notify) {
             p.setNotifyValue(true, for: ch)   // 通知の購読のみ(書き込みなし)
         }
+        for ch in s.characteristics ?? [] where ch.uuid == chInfo && ch.properties.contains(.read) {
+            p.readValue(for: ch)              // 機器情報の読み出し(書き込みなし)
+        }
         status = "受信中"
     }
 
     func peripheral(_ p: CBPeripheral, didUpdateValueFor ch: CBCharacteristic, error: Error?) {
+        if ch.uuid == chInfo, let data = ch.value {
+            // 形式: "FW01.01/製造番号/モード/メモリ/電池"
+            let text = String(decoding: data, as: UTF8.self)
+            let parts = text.split(separator: "/")
+            serial = parts.count > 1 ? String(parts[1]).trimmingCharacters(in: .whitespacesAndNewlines.union(.controlCharacters)) : text
+            return
+        }
         guard let kind = kinds[ch.uuid], let data = ch.value else { return }
         counts[kind, default: 0] += 1
         if kind == 0x01, let pkt = EcgPacket([UInt8](data)) {
