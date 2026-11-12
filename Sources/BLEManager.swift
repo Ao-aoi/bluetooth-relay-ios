@@ -7,6 +7,7 @@ import CoreBluetooth
 final class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     @Published var status = "待機中"
     @Published var scanning = false
+    @Published var deviceName = ""   // 接続中の心電計の名前(例 kokolog0111)
     @Published var counts: [UInt8: Int] = [:]
 
     private let analysis: AnalysisModel
@@ -51,7 +52,7 @@ final class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
 
     func centralManager(_ c: CBCentralManager, willRestoreState dict: [String: Any]) {
         if let ps = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral], let p = ps.first {
-            peripheral = p; p.delegate = self; wantConnection = true
+            peripheral = p; p.delegate = self; wantConnection = true; deviceName = p.name ?? ""
         }
     }
 
@@ -62,6 +63,7 @@ final class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
         central.stopScan()
         peripheral = p
         p.delegate = self
+        deviceName = name
         status = "\(name) に接続中..."
         central.connect(p)
     }

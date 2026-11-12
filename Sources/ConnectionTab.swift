@@ -16,6 +16,7 @@ struct ConnectionTab: View {
                 Button(ble.scanning ? "切断" : "心電計を探して接続") {
                     ble.scanning ? ble.stop() : ble.start()
                 }
+                LabeledContent("心電計", value: ble.deviceName.isEmpty ? "--" : ble.deviceName)
                 Text(ble.status)
                 WaveView(store: model.waveStore, length: AnalysisModel.waveLength)
                 Text("▼ は検出したR波").font(.caption).foregroundColor(.secondary)
