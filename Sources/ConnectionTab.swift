@@ -22,12 +22,11 @@ struct ConnectionTab: View {
                 Text(ble.status)
                 DisclosureGroup("心電図", isExpanded: $showWave) {
                     WaveView(store: model.waveStore, length: AnalysisModel.waveLength)
-                    Text("▼ は検出したR波").font(.caption).foregroundColor(.secondary)
                 }
-                LabeledContent("心電図", value: "\(ble.counts[0x01] ?? 0)")
-                LabeledContent("動き", value: "\(ble.counts[0x02] ?? 0)")
-                LabeledContent("5秒ごと", value: "\(ble.counts[0x03] ?? 0)")
-                LabeledContent("届かなかったパケット", value: "\(model.lostPackets)")
+                LabeledContent("心電図の受信パケット数", value: "\(ble.counts[0x01] ?? 0)")
+                LabeledContent("心電図の欠落パケット数", value: "\(model.lostPackets)")
+                LabeledContent("ジャイロセンサーの受信パケット数", value: "\(ble.counts[0x02] ?? 0)")
+                LabeledContent("イベントの受信パケット数", value: "\(ble.counts[0x03] ?? 0)")
             }
             Section("PC") {
                 TextField("PCのIPアドレス(例 192.168.0.12)", text: $host)
@@ -50,16 +49,16 @@ struct ConnectionTab: View {
                         relay.start(host: host)
                     }
                 }
-                LabeledContent("PCとの接続", value: relay.connected ? "つながっています" : "つながっていません")
-                LabeledContent("ためてある数", value: "\(relay.bufferedCount)")
+                LabeledContent("PCとの接続", value: relay.connected ? "接続中" : "未接続")
+                LabeledContent("未送信パケット数", value: "\(relay.bufferedCount)")
                 LabeledContent("PCへ送った数", value: "\(relay.sentCount)")
             }
             Section("PCに解析結果を表示") {
-                Button(mirror.running ? "表示を止める" : "表示を始める") {
+                Button(mirror.running ? "表示停止" : "表示開始") {
                     mirror.running ? mirror.stop() : mirror.start(host: host)
                 }
                 .disabled(!mirror.running && host.isEmpty)
-                LabeledContent("PCとの接続", value: mirror.connected ? "つながっています" : "つながっていません")
+                LabeledContent("PCとの接続", value: mirror.connected ? "接続中" : "未接続")
             }
         }
         .onReceive(finder.$pcs) { pcs in
