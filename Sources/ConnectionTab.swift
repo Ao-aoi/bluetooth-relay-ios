@@ -8,6 +8,7 @@ struct ConnectionTab: View {
     @ObservedObject var mirror: MirrorClient
     @ObservedObject var finder: PCFinder
     @State private var askMirror = false
+    @AppStorage("showWave") private var showWave = true
     @State private var host: String = UserDefaults.standard.string(forKey: "host") ?? ""
 
     var body: some View {
@@ -19,8 +20,10 @@ struct ConnectionTab: View {
                 LabeledContent("心電計", value: ble.deviceName.isEmpty ? "--" : ble.deviceName)
                 LabeledContent("製造番号", value: ble.serial.isEmpty ? "--" : ble.serial)
                 Text(ble.status)
-                WaveView(store: model.waveStore, length: AnalysisModel.waveLength)
-                Text("▼ は検出したR波").font(.caption).foregroundColor(.secondary)
+                DisclosureGroup("心電図", isExpanded: $showWave) {
+                    WaveView(store: model.waveStore, length: AnalysisModel.waveLength)
+                    Text("▼ は検出したR波").font(.caption).foregroundColor(.secondary)
+                }
                 LabeledContent("心電図", value: "\(ble.counts[0x01] ?? 0)")
                 LabeledContent("動き", value: "\(ble.counts[0x02] ?? 0)")
                 LabeledContent("5秒ごと", value: "\(ble.counts[0x03] ?? 0)")

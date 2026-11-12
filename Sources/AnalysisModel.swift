@@ -39,6 +39,7 @@ struct AnalysisSettings: Equatable {
 /// 接続タブに出す心電図の波形(直近5秒)と、その中のR波の位置。
 struct Wave {
     var samples: [Double] = []
+    var filtered: [Double] = [] // 前処理後(5点移動平均+5〜25Hz帯域通過)。samples と右端をそろえる
     var peaks: [Int] = []       // samples の中の位置
 }
 
@@ -116,7 +117,7 @@ final class AnalysisModel: ObservableObject {
         let e = session.ecg
         let a = e.adc.suffix(AnalysisModel.waveLength)
         let first = e.n - a.count       // a の先頭の通し番号
-        waveStore.wave = Wave(samples: Array(a), peaks: e.kept.suffix(40).map { $0 - first }.filter { $0 >= 0 })
+        waveStore.wave = Wave(samples: Array(a), filtered: Array(e.f.suffix(a.count)), peaks: e.kept.suffix(40).map { $0 - first }.filter { $0 >= 0 })
         sincePublish += 1
         if sincePublish >= 5 { publish() }      // 心電パケットは0.2秒ごとなので、5個で1秒
     }
