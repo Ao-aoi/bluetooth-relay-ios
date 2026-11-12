@@ -172,6 +172,16 @@ def draw(fig, phones, minutes):
             ax_t.text(0, -0.04, "切断", fontsize=11, va="top", color=gray)
 
 
+def japanese_font():
+    """このPCにある日本語フォントを1つ選ぶ。無いフォントを指定すると警告が出続けるため、あるものだけを使う。"""
+    from matplotlib import font_manager
+    have = {f.name for f in font_manager.fontManager.ttflist}
+    for name in ["Yu Gothic", "Meiryo", "MS Gothic", "Hiragino Sans", "Noto Sans CJK JP", "IPAGothic"]:
+        if name in have:
+            return name
+    return "sans-serif"
+
+
 def main():
     ap = argparse.ArgumentParser(description="iPhoneアプリの解析結果をPCに表示する")
     ap.add_argument("--minutes", type=float, default=10.0, help="グラフに表示する時間[分](既定10)")
@@ -180,7 +190,7 @@ def main():
 
     import matplotlib
     import matplotlib.pyplot as plt
-    matplotlib.rcParams["font.family"] = ["Yu Gothic", "Meiryo", "MS Gothic", "Hiragino Sans", "IPAGothic", "sans-serif"]
+    matplotlib.rcParams["font.family"] = [japanese_font()]
 
     monitor = Monitor()
     threading.Thread(target=lambda: asyncio.run(serve(monitor, args.port)), daemon=True).start()

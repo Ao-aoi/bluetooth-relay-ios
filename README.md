@@ -21,6 +21,7 @@ GitHub Actions(macOS)でビルドし、署名なしの `BluetoothRelay.ipa` を�
 - iPhoneの解析結果を表示する: `python pc_monitor.py`(`pip install websockets zeroconf matplotlib`)。ポート9751。
   iPhoneが計算した心拍数とRiRを、iPhone 1台につき1行で表示する。複数のiPhoneを同時に表示できる。
   PCでは解析しない。通信の形式は `pc_monitor.py` の先頭に書いてある。
+- Pythonが無いPCでは: GitHub Actions の「pc-monitor-exe」の成果物 `pc-tools-windows` を落として、`pc_monitor.exe` / `pc_receiver.exe` を開く。初回はWindowsのファイアウォールの確認が出るので「許可」を押す。
 - どちらも、動かしている間はアプリの「PCを探す」に出る。出ないときはPCのIPアドレスをアプリに入力する。
 
 ## 解析部(Analysis/)

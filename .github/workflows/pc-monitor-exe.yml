@@ -1,0 +1,23 @@
+name: pc-monitor-exe
+on:
+  push:
+    paths: ['pc_monitor.py', 'pc_receiver.py', '.github/workflows/pc-monitor-exe.yml']
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 必要なものを入れる
+        run: pip install websockets zeroconf matplotlib pyinstaller
+      - name: exeを作る(Pythonが入っていないPCでも動く)
+        run: |
+          pyinstaller --onefile --name pc_monitor --hidden-import zeroconf._utils.ipaddress --hidden-import zeroconf._handlers.answers pc_monitor.py
+          pyinstaller --onefile --name pc_receiver --hidden-import zeroconf._utils.ipaddress --hidden-import zeroconf._handlers.answers pc_receiver.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pc-tools-windows
+          path: dist/*.exe
