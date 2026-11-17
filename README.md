@@ -29,6 +29,7 @@ GitHub Actions(macOS)でビルドし、署名なしの `BluetoothRelay.ipa` を�
 元は `kokolog_test` の `realtime/pipeline.py`(逐次処理)と、`20261110_viewer_realtime.py` の解析部。
 RiRの計算式(`RiRFilters.swift`)は基準プログラム Uef190901 のまま変えない。
 
+- 読み方: `docs/解析部の読み方.md`(ファイルごとの説明とPython版との対応)
 - テスト: `cd Analysis && swift test`(Python版の結果を正解として比べる。心電図とジャイロは計算で作った作り物)
 - 状態(安静 / 軽い動き / 運動)の判定は `Activity.swift`。元は `realtime/activity.py`(Python版では「安静」を「静止」と呼ぶ)
 - 実測データでの確認(Windows):

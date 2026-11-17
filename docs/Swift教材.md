@@ -12,6 +12,8 @@
 6. `Sources/PCFinder.swift`(PCの自動検出)
 7. `Analysis/Sources/EcgCore/Packet.swift`(パケットの解読、Windowsでも動く)
 
+解析部(R波検出からRiRまで)は `docs/解析部の読み方.md` に続く。
+
 ---
 
 ## 0. 最低限の文法
