@@ -8,6 +8,7 @@ struct ContentView: View {
     @StateObject private var finder = PCFinder()
     @AppStorage("autoScanDevice") private var autoScanDevice = false
     @AppStorage("autoFindPC") private var autoFindPC = false
+    @AppStorage("appearance") private var appearance = 0   // 0=端末の設定に合わせる 1=ライト 2=ダーク
 
     var body: some View {
         TabView {
@@ -20,6 +21,7 @@ struct ContentView: View {
             SettingsTab(model: model)
                 .tabItem { Label("設定", systemImage: "gearshape") }
         }
+        .preferredColorScheme(appearance == 1 ? .light : appearance == 2 ? .dark : nil)
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = true   // 使っている間は画面を消さない
             if autoFindPC { finder.search() }

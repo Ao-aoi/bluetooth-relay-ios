@@ -6,6 +6,7 @@ struct SettingsTab: View {
     @AppStorage("rangeMinutes") private var rangeMinutes = 10.0
     @AppStorage("rangeAll") private var rangeAll = false
     @AppStorage("useSwiftCharts") private var useSwiftCharts = false
+    @AppStorage("appearance") private var appearance = 0
     @AppStorage("autoScanDevice") private var autoScanDevice = false
     @AppStorage("autoFindPC") private var autoFindPC = false
     @AppStorage("deviceLabel") private var deviceLabel = ""
@@ -56,6 +57,13 @@ struct SettingsTab: View {
                         Text("Canvas").tag(false)
                         Text("Swift Charts").tag(true)
                     }
+                }
+            }
+            Section("表示") {
+                Picker("画面の色", selection: $appearance) {
+                    Text("端末に合わせる").tag(0)
+                    Text("ライト").tag(1)
+                    Text("ダーク").tag(2)
                 }
             }
             Section("PCの画面に出す名前") {
