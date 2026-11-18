@@ -1,7 +1,7 @@
 import SwiftUI
 import Charts
 
-/// Swift Charts で描く版(設定の「描き方」で切り替える)。Canvas版と同じデータを同じ範囲で描く。
+/// Swift Charts で描く版(設定の「描き方」で切り替える。iOS 16 以降だけ)。Canvas版と同じデータを同じ範囲で描く。
 struct ChartSample: Identifiable {
     let id: Int
     let x: Double
@@ -9,6 +9,7 @@ struct ChartSample: Identifiable {
     let group: Int      // 折れ線: 線を切る単位。散布図: 1 が最新の拍
 }
 
+@available(iOS 16, *)
 struct LineChartSC: View {
     let points: [BeatPoint]
     let value: (BeatPoint) -> Double?
@@ -46,6 +47,7 @@ struct LineChartSC: View {
     }
 }
 
+@available(iOS 16, *)
 struct ScatterChartSC: View {
     let points: [BeatPoint]
     let xMax: Double

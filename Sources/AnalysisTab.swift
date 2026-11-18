@@ -66,7 +66,7 @@ struct AnalysisTab: View {
     @ViewBuilder
     private func line(_ value: @escaping (BeatPoint) -> Double?, _ yRange: ClosedRange<Double>,
                       _ yStep: Double, _ color: Color) -> some View {
-        if useSwiftCharts {
+        if useSwiftCharts, #available(iOS 16, *) {
             LineChartSC(points: model.points, value: value, xRange: xRange, yRange: yRange, color: color)
                 .frame(maxHeight: .infinity)
         } else {
@@ -98,7 +98,7 @@ struct AnalysisTab: View {
             Text("時間 [分]").font(.caption2).foregroundColor(.secondary)
             HStack(alignment: .top, spacing: 12) {
                 Group {
-                    if useSwiftCharts {
+                    if useSwiftCharts, #available(iOS 16, *) {
                         ScatterChartSC(points: model.points, xMax: 140)
                     } else {
                         ScatterChart(points: model.points, xMax: 140,

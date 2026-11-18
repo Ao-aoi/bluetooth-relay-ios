@@ -2,7 +2,7 @@ name: BluetoothRelay
 options:
   bundleIdPrefix: jp.example.bluetoothrelay
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "15.0"
 targets:
   BluetoothRelay:
     type: application

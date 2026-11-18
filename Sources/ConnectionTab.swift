@@ -17,16 +17,16 @@ struct ConnectionTab: View {
                 Button(ble.scanning ? "切断" : "心電計を探して接続") {
                     ble.scanning ? ble.stop() : ble.start()
                 }
-                LabeledContent("心電計", value: ble.deviceName.isEmpty ? "--" : ble.deviceName)
-                LabeledContent("製造番号", value: ble.serial.isEmpty ? "--" : ble.serial)
+                Row("心電計", value: ble.deviceName.isEmpty ? "--" : ble.deviceName)
+                Row("製造番号", value: ble.serial.isEmpty ? "--" : ble.serial)
                 Text(ble.status)
                 DisclosureGroup("心電図", isExpanded: $showWave) {
                     WaveView(store: model.waveStore, length: AnalysisModel.waveLength)
                 }
-                LabeledContent("心電図の受信パケット数", value: "\(ble.counts[0x01] ?? 0)")
-                LabeledContent("心電図の欠落パケット数", value: "\(model.lostPackets)")
-                LabeledContent("ジャイロセンサーの受信パケット数", value: "\(ble.counts[0x02] ?? 0)")
-                LabeledContent("イベントの受信パケット数", value: "\(ble.counts[0x03] ?? 0)")
+                Row("心電図の受信パケット数", value: "\(ble.counts[0x01] ?? 0)")
+                Row("心電図の欠落パケット数", value: "\(model.lostPackets)")
+                Row("ジャイロセンサーの受信パケット数", value: "\(ble.counts[0x02] ?? 0)")
+                Row("イベントの受信パケット数", value: "\(ble.counts[0x03] ?? 0)")
             }
             Section("PC") {
                 TextField("PCのIPアドレス(例 192.168.0.12)", text: $host)
@@ -40,7 +40,7 @@ struct ConnectionTab: View {
                         UserDefaults.standard.set(pc.ip, forKey: "host")
                         askMirror = true
                     } label: {
-                        LabeledContent(pc.name, value: pc.ip)
+                        Row(pc.name, value: pc.ip)
                     }
                 }
                 Button(relay.running ? "PCへの送信を止める" : "PCへの送信を始める") {
@@ -49,16 +49,16 @@ struct ConnectionTab: View {
                         relay.start(host: host)
                     }
                 }
-                LabeledContent("PCとの接続", value: relay.connected ? "接続中" : "未接続")
-                LabeledContent("未送信パケット数", value: "\(relay.bufferedCount)")
-                LabeledContent("PCへ送った数", value: "\(relay.sentCount)")
+                Row("PCとの接続", value: relay.connected ? "接続中" : "未接続")
+                Row("未送信パケット数", value: "\(relay.bufferedCount)")
+                Row("PCへ送った数", value: "\(relay.sentCount)")
             }
             Section("PCに解析結果を表示") {
                 Button(mirror.running ? "表示停止" : "表示開始") {
                     mirror.running ? mirror.stop() : mirror.start(host: host)
                 }
                 .disabled(!mirror.running && host.isEmpty)
-                LabeledContent("PCとの接続", value: mirror.connected ? "接続中" : "未接続")
+                Row("PCとの接続", value: mirror.connected ? "接続中" : "未接続")
             }
         }
         .onReceive(finder.$pcs) { pcs in

@@ -11,6 +11,9 @@ GitHub Actions(macOS)でビルドし、署名なしの `BluetoothRelay.ipa` を�
 - 自分用: Windowsの Sideloadly(無料のApple IDで署名、7日ごとに入れ直し)。
 - 複数のiPhone/期限なし: Apple Developer Program(年額約13,000円)+ TestFlight が必要。
 
+## 対応するiPhone
+iOS 15 以降(iPhone 6s / SE(第1世代) / 7 以降)。Swift Charts での描画は iOS 16 以降だけで、iOS 15 では Canvas で描く。
+
 ## アプリの画面
 - 解析: 心拍数とRiRの時間推移、ΔHR と ΣRiR の散布図、信号品質、状態(安静 / 軽い動き / 運動)
 - 接続: 心電計との接続(波形と検出したR波)、PCへの送信、PCへの解析結果の表示

@@ -16,11 +16,11 @@ struct HistoryTab: View {
     private func reload() { files = RecordStore.list() }
 
     var body: some View {
-        NavigationStack {
+        NavigationContainer {
             List {
                 if files.isEmpty { Text("記録はまだありません").foregroundColor(.secondary) }
                 ForEach(files) { f in
-                    NavigationLink(value: f) {
+                    NavigationLink(destination: HistoryDetail(file: f, settings: model.settings)) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(HistoryTab.dateFormat.string(from: f.start))
                             HStack {
@@ -38,9 +38,6 @@ struct HistoryTab: View {
                 }
             }
             .navigationTitle("履歴")
-            .navigationDestination(for: RecordFile.self) { f in
-                HistoryDetail(file: f, settings: model.settings)
-            }
             .refreshable { reload() }
             .onAppear { reload() }
             .alert("この記録を削除します", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
@@ -82,7 +79,7 @@ struct HistoryDetail: View {
 
     @ViewBuilder
     private func line(_ value: @escaping (BeatPoint) -> Double?, _ y: ClosedRange<Double>, _ step: Double, _ c: Color) -> some View {
-        if useSwiftCharts {
+        if useSwiftCharts, #available(iOS 16, *) {
             LineChartSC(points: points, value: value, xRange: 0...duration, yRange: y, color: c)
         } else {
             LineChart(points: points, value: value, xRange: 0...duration, yRange: y, yStep: step, color: c)
@@ -101,7 +98,7 @@ struct HistoryDetail: View {
                     line({ $0.rir }, 0...1, 0.2, .blue).frame(height: 160)
                     Text("時間 [分]").font(.caption2).foregroundColor(.secondary)
                     Group {
-                        if useSwiftCharts {
+                        if useSwiftCharts, #available(iOS 16, *) {
                             ScatterChartSC(points: points, xMax: 140)
                         } else {
                             ScatterChart(points: points, xMax: 140, yLabel: String(format: "ΣRiR/%.0f", settings.sumrirSpan))
@@ -111,7 +108,7 @@ struct HistoryDetail: View {
                     ForEach(summary, id: \.0) { k, v in
                         HStack { Text(k); Spacer(); Text(v).monospacedDigit() }.font(.subheadline)
                     }
-                    ShareLink(item: file.url) { Label("記録ファイルを送る", systemImage: "square.and.arrow.up") }
+                    ShareFileButton(url: file.url, title: "記録ファイルを送る")
                         .padding(.top, 6)
                 }
             }

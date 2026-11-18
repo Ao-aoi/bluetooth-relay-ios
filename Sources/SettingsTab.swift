@@ -34,7 +34,7 @@ struct SettingsTab: View {
     }
 
     private func field(_ title: String, _ text: Binding<String>) -> some View {
-        LabeledContent(title) {
+        Row(title) {
             TextField("", text: text)
                 .keyboardType(.numbersAndPunctuation)
                 .submitLabel(.done)
@@ -51,9 +51,11 @@ struct SettingsTab: View {
                         if let v = Double(t), v >= 0.5, v <= 1440 { rangeMinutes = v }
                     }
                 Toggle("測定の全体を表示", isOn: $rangeAll)
-                Picker("描き方", selection: $useSwiftCharts) {
-                    Text("Canvas").tag(false)
-                    Text("Swift Charts").tag(true)
+                if swiftChartsAvailable {
+                    Picker("描き方", selection: $useSwiftCharts) {
+                        Text("Canvas").tag(false)
+                        Text("Swift Charts").tag(true)
+                    }
                 }
             }
             Section("PCの画面に出す名前") {
@@ -84,7 +86,7 @@ struct SettingsTab: View {
                 Button("新しい記録を始める", role: .destructive) { askRestart = true }
             }
         }
-        .scrollDismissesKeyboard(.interactively)
+        .dismissKeyboardOnScroll()
         .onReceive(model.$settings) { fill($0) }
         .onAppear {
             rangeText = String(format: "%g", rangeMinutes)
