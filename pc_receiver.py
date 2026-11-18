@@ -1,9 +1,11 @@
 """中継アプリ(ios_relay)からのデータをPCで受け取り、生のまま保存する簡易受け口。
-使い方: pip install websockets zeroconf ; python pc_receiver.py
+使い方: pip install websockets zeroconf cryptography ; python pc_receiver.py
+通信は暗号化する(TLS、relay_tls.py)。初回はiPhoneに出る確認コードが、ここに表示するコードと同じか確かめる。
 iPhoneアプリにこのPCのIPアドレスを入れて「PCへの送信を始める」を押す。
 形式: 1バイトの種類(0x01=心電,0x02=動き,0x03=5秒ごと) + BLEパケット(realtime/ネットワーク中継の仕様.md)"""
 import asyncio, socket, time, json
 import websockets
+import relay_tls
 
 OUT = open(time.strftime("relay_%Y%m%d_%H%M%S.jsonl"), "a", encoding="utf-8")
 
@@ -44,8 +46,9 @@ async def main():
             addresses=[socket.inet_aton(ip)], port=9750))
     except ImportError:
         print("(自動検出には pip install zeroconf が必要です。IPの手入力は使えます)")
-    async with websockets.serve(handler, "0.0.0.0", 9750):
-        print("待機中。PCのIP:", ip)
+    ctx = relay_tls.server_context()
+    async with websockets.serve(handler, "0.0.0.0", 9750, ssl=ctx):
+        print("待機中。PCのIP:", ip, " 確認コード:", relay_tls.code())
         try:
             await asyncio.Future()
         finally:

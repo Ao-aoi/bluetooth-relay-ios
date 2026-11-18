@@ -49,7 +49,8 @@ struct ConnectionTab: View {
                         relay.start(host: host)
                     }
                 }
-                Row("PCとの接続", value: relay.connected ? "接続中" : "未接続")
+                Row("PCとの接続", value: relay.connected ? "接続中(暗号化)" : "未接続")
+                if relay.mismatch { Text("PCの確認コードが前回と違うため、接続を止めています").foregroundColor(.red) }
                 Row("未送信パケット数", value: "\(relay.bufferedCount)")
                 Row("PCへ送った数", value: "\(relay.sentCount)")
             }
@@ -58,11 +59,23 @@ struct ConnectionTab: View {
                     mirror.running ? mirror.stop() : mirror.start(host: host)
                 }
                 .disabled(!mirror.running && host.isEmpty)
-                Row("PCとの接続", value: mirror.connected ? "接続中" : "未接続")
+                Row("PCとの接続", value: mirror.connected ? "接続中(暗号化)" : "未接続")
+                if mirror.mismatch { Text("PCの確認コードが前回と違うため、接続を止めています").foregroundColor(.red) }
             }
         }
         .onReceive(finder.$pcs) { pcs in
             if host.isEmpty, let p = pcs.first { host = p.ip }
+        }
+        .alert(item: Binding(get: { relay.pending ?? mirror.pending }, set: { if $0 == nil { relay.pending = nil; mirror.pending = nil } })) { p in
+            Alert(title: Text("確認コード \(p.code)"),
+                  message: Text("PCの画面のコードと同じなら「信頼する」を押してください。違う場合は別のPCです。"),
+                  primaryButton: .default(Text("信頼する")) {
+                      relay.trust(p)
+                      mirror.trust(p)
+                  },
+                  secondaryButton: .cancel(Text("やめる")) {
+                      if TLSPin.pinned(p.host) == nil { relay.stop(); mirror.stop() }
+                  })
         }
         .alert("このPCに解析結果を表示しますか", isPresented: $askMirror) {
             Button("はい") { mirror.start(host: host) }

@@ -1,7 +1,7 @@
 name: pc-monitor-exe
 on:
   push:
-    paths: ['pc_monitor.py', 'pc_receiver.py', '.github/workflows/pc-monitor-exe.yml']
+    paths: ['pc_monitor.py', 'pc_receiver.py', 'relay_tls.py', '.github/workflows/pc-monitor-exe.yml']
   workflow_dispatch:
 jobs:
   build:
@@ -12,11 +12,11 @@ jobs:
         with:
           python-version: '3.12'
       - name: 必要なものを入れる
-        run: pip install websockets zeroconf matplotlib nuitka
+        run: pip install websockets zeroconf matplotlib cryptography nuitka
       - name: exeを作る(Nuitka。Pythonが入っていないPCでも動く)
         run: |
-          python -m nuitka --onefile --assume-yes-for-downloads --enable-plugin=matplotlib --include-package=zeroconf --include-package=websockets --output-dir=dist pc_monitor.py
-          python -m nuitka --onefile --assume-yes-for-downloads --include-package=zeroconf --include-package=websockets --output-dir=dist pc_receiver.py
+          python -m nuitka --onefile --assume-yes-for-downloads --enable-plugin=matplotlib --include-package=zeroconf --include-package=websockets --include-package=cryptography --include-module=relay_tls --output-dir=dist pc_monitor.py
+          python -m nuitka --onefile --assume-yes-for-downloads --include-package=zeroconf --include-package=websockets --include-package=cryptography --include-module=relay_tls --output-dir=dist pc_receiver.py
       - uses: actions/upload-artifact@v4
         with:
           name: pc-tools-windows

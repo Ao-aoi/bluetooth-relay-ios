@@ -1,11 +1,13 @@
 import Foundation
 
-/// 解析結果(心拍数・RiRなど)を、PCの pc_monitor.py へ WebSocket(ws://<PC>:9751)で送る。
+/// 解析結果(心拍数・RiRなど)を、PCの pc_monitor.py へ WebSocket(wss://<PC>:9751、TLSで暗号化)で送る。
 /// 1秒に1回、JSONの文字メッセージを1つ送る。つながっていない間は送らない
 /// (つながり直したときに、AnalysisModel が直近の拍をまとめて送り直す)。
 final class MirrorClient: NSObject, ObservableObject, URLSessionWebSocketDelegate {
     @Published var running = false
     @Published var connected = false
+    @Published var pending: PendingPC? = nil     // 初めてのPC。確認コードの照合待ち
+    @Published var mismatch = false               // 覚えたPCと証明書が違った
     @Published var host = ""
 
     static let port = 9751
@@ -25,7 +27,7 @@ final class MirrorClient: NSObject, ObservableObject, URLSessionWebSocketDelegat
         running = true
         connect()
         retry = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
-            guard let self, self.running, !self.connected, self.task == nil else { return }
+            guard let self, self.running, !self.connected, self.task == nil, self.pending == nil else { return }
             self.connect()
         }
     }
@@ -39,7 +41,7 @@ final class MirrorClient: NSObject, ObservableObject, URLSessionWebSocketDelegat
     }
 
     private func connect() {
-        guard let url = URL(string: "ws://\(host):\(Self.port)") else { return }
+        guard let url = URL(string: "wss://\(host):\(Self.port)") else { return }
         let t = session.webSocketTask(with: url)
         task = t
         t.resume()
@@ -60,6 +62,31 @@ final class MirrorClient: NSObject, ObservableObject, URLSessionWebSocketDelegat
     private func dropped() {
         task = nil
         connected = false
+    }
+
+    /// 暗号化の接続で、相手が覚えたPCかを確かめる。初めてのPCなら、確認コードの照合を待つ。
+    func urlSession(_ s: URLSession, task t: URLSessionTask, didReceive challenge: URLAuthenticationChallenge,
+                    completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        switch TLSPin.check(challenge, host: host) {
+        case .ok(let cred)?:
+            mismatch = false
+            completionHandler(.useCredential, cred)
+        case .unknown(let fp)?:
+            pending = PendingPC(host: host, fingerprint: fp)
+            completionHandler(.cancelAuthenticationChallenge, nil)
+        case .mismatch?:
+            mismatch = true
+            completionHandler(.cancelAuthenticationChallenge, nil)
+        case nil:
+            completionHandler(.performDefaultHandling, nil)
+        }
+    }
+
+    /// 確認コードが一致したので、このPCを覚えて、つなぎ直す。
+    func trust(_ p: PendingPC) {
+        TLSPin.trust(p.host, fingerprint: p.fingerprint)
+        pending = nil
+        if running { task?.cancel(); task = nil; connect() }
     }
 
     func urlSession(_ s: URLSession, webSocketTask t: URLSessionWebSocketTask, didOpenWithProtocol p: String?) {

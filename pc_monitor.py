@@ -2,11 +2,12 @@
 PCでは解析しない。iPhoneが計算した値をそのまま描く。
 
 使い方:
-    pip install websockets zeroconf matplotlib
+    pip install websockets zeroconf matplotlib cryptography
     python pc_monitor.py            (表示する時間を変えるとき: python pc_monitor.py --minutes 30)
 iPhoneアプリの「接続」タブでこのPCを選び、「PCに解析結果を表示」を始める。
 
-通信: WebSocket、ポート9751。iPhoneは1秒に1回、JSONの文字メッセージを1つ送る。
+通信: WebSocket(TLSで暗号化、relay_tls.py)、ポート9751。初回はiPhoneに出る確認コードが、ウィンドウのコードと同じか確かめる。
+iPhoneは1秒に1回、JSONの文字メッセージを1つ送る。
     name      iPhoneの名前
     elapsed   測定開始からの経過秒
     hr, rir   最新の心拍数[bpm]とRiR(まだ無ければ null)
@@ -22,6 +23,8 @@ import json
 import socket
 import threading
 import time
+
+import relay_tls
 
 PORT = 9751
 QUALITY = {0: ("良好", "green"), 1: ("注意", "darkorange"), 2: ("不良", "red")}
@@ -115,7 +118,8 @@ async def serve(monitor, port, ready=None):
             addresses=[socket.inet_aton(local_ip())], port=port))
     except Exception as e:  # zeroconf が無い、ネットワークが無い、など
         print("PCを探す機能は使えません(IPアドレスの手入力は使えます):", e)
-    async with websockets.serve(handler, "0.0.0.0", port):
+    ctx = relay_tls.server_context()
+    async with websockets.serve(handler, "0.0.0.0", port, ssl=ctx):
         if ready:
             ready.set()
         try:
@@ -129,7 +133,8 @@ def draw(fig, phones, minutes):
     """ウィンドウ全体を描き直す。iPhone 1台につき1行(左から 数値 / 心拍数 / RiR)。"""
     fig.clf()
     if not phones:
-        fig.text(0.5, 0.5, "iPhoneからの接続を待っています", ha="center", va="center", fontsize=16)
+        fig.text(0.5, 0.55, "iPhoneからの接続を待っています", ha="center", va="center", fontsize=16)
+        fig.text(0.5, 0.40, "確認コード " + relay_tls.code(), ha="center", va="center", fontsize=20)
         return
     gs = fig.add_gridspec(len(phones), 3, width_ratios=[1.1, 3, 3], hspace=0.45, wspace=0.22,
                           left=0.03, right=0.98, top=0.93, bottom=0.10)
@@ -194,7 +199,8 @@ def main():
 
     monitor = Monitor()
     threading.Thread(target=lambda: asyncio.run(serve(monitor, args.port)), daemon=True).start()
-    print(f"待機中。このPCのIPアドレス: {local_ip()}  ポート: {args.port}")
+    relay_tls.server_context()   # 鍵と証明書が無ければここで作る
+    print(f"待機中。このPCのIPアドレス: {local_ip()}  ポート: {args.port}  確認コード: {relay_tls.code()}")
 
     fig = plt.figure("解析結果の表示", figsize=(12, 4))
     seen = 0

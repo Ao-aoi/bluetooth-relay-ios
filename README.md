@@ -25,6 +25,9 @@ iOS 15 以降(iPhone 6s / SE(第1世代) / 7 以降)。Swift Charts での描画
   iPhoneが計算した心拍数とRiRを、iPhone 1台につき1行で表示する。複数のiPhoneを同時に表示できる。
   PCでは解析しない。通信の形式は `pc_monitor.py` の先頭に書いてある。
 - Pythonが無いPCでは: GitHub Actions の「pc-monitor-exe」の成果物 `pc-tools-windows` を落として、`pc_monitor.exe` / `pc_receiver.exe` を開く。初回はWindowsのファイアウォールの確認が出るので「許可」を押す。
+- 通信は暗号化している(TLS)。PC側の鍵と証明書は初回に自動で作り、ホームフォルダの `.btrelay` に置く(`relay_tls.py`)。
+  iPhoneが初めてそのPCにつなぐときは確認コードが出るので、PCの画面(pc_receiver はコンソール、pc_monitor はウィンドウ)のコードと同じなら「信頼する」を押す。
+  2回目からは自動でつながる。コードが前回と違うPCにはつながらない。`pip install cryptography` が必要。
 - どちらも、動かしている間はアプリの「PCを探す」に出る。出ないときはPCのIPアドレスをアプリに入力する。
 
 ## 解析部(Analysis/)

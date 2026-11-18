@@ -66,6 +66,9 @@ struct SettingsTab: View {
                     Text("ダーク").tag(2)
                 }
             }
+            Section("PCとの通信") {
+                Button("登録したPCを消す") { TLSPin.forgetAll() }
+            }
             Section("PCの画面に出す名前") {
                 TextField(UIDevice.current.name, text: $deviceLabel)
                     .autocorrectionDisabled()
