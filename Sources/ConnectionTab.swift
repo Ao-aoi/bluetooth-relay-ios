@@ -7,7 +7,7 @@ struct ConnectionTab: View {
     @ObservedObject var model: AnalysisModel
     @ObservedObject var mirror: MirrorClient
     @ObservedObject var finder: PCFinder
-    @State private var askMirror = false
+    @State private var manual = false
     @AppStorage("showWave") private var showWave = true
     @State private var host: String = UserDefaults.standard.string(forKey: "host") ?? ""
 
@@ -29,19 +29,18 @@ struct ConnectionTab: View {
                 Row("イベントの受信パケット数", value: "\(ble.counts[0x03] ?? 0)")
             }
             Section("PC") {
-                TextField("PCのIPアドレス(例 192.168.0.12)", text: $host)
-                    .keyboardType(.numbersAndPunctuation)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
                 Button("PCを探す") { finder.search() }
                 ForEach(finder.pcs) { pc in
-                    Button {
-                        host = pc.ip
-                        UserDefaults.standard.set(pc.ip, forKey: "host")
-                        askMirror = true
-                    } label: {
-                        Row(pc.name, value: pc.ip)
+                    Button { connect(pc.ip) } label: {
+                        Row(pc.name, value: pc.ip == host && relay.connected ? "接続中" : pc.ip)
                     }
+                }
+                DisclosureGroup("IPアドレスを入力", isExpanded: $manual) {
+                    TextField("例 192.168.0.12", text: $host)
+                        .keyboardType(.numbersAndPunctuation)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                    Button("接続") { connect(host) }.disabled(host.isEmpty)
                 }
                 Button(relay.running ? "PCへの送信を止める" : "PCへの送信を始める") {
                     if relay.running { relay.stop() } else {
@@ -77,9 +76,14 @@ struct ConnectionTab: View {
                       if TLSPin.pinned(p.host) == nil { relay.stop(); mirror.stop() }
                   })
         }
-        .alert("このPCに解析結果を表示しますか", isPresented: $askMirror) {
-            Button("はい") { mirror.start(host: host) }
-            Button("いいえ", role: .cancel) {}
-        }
+    }
+
+    /// 送信と解析結果の表示を同時に始める。
+    private func connect(_ ip: String) {
+        host = ip
+        UserDefaults.standard.set(ip, forKey: "host")
+        relay.stop(); mirror.stop()
+        relay.start(host: ip)
+        mirror.start(host: ip)
     }
 }

@@ -12,13 +12,22 @@ enum TLSPin {
 
     static func pinned(_ host: String) -> String? { UserDefaults.standard.string(forKey: key(host)) }
 
-    static func trust(_ host: String, fingerprint: String) { UserDefaults.standard.set(fingerprint, forKey: key(host)) }
+    /// 信頼した指紋の一覧。PCのIPアドレスが変わっても、同じ証明書なら確認し直さない。
+    private static var trusted: Set<String> { Set(UserDefaults.standard.stringArray(forKey: "pins") ?? []) }
+
+    static func isTrusted(_ fingerprint: String) -> Bool { trusted.contains(fingerprint) }
+
+    static func trust(_ host: String, fingerprint: String) {
+        UserDefaults.standard.set(fingerprint, forKey: key(host))
+        UserDefaults.standard.set(Array(trusted.union([fingerprint])), forKey: "pins")
+    }
 
     /// 覚えたPCを全部忘れる。
     static func forgetAll() {
         for k in UserDefaults.standard.dictionaryRepresentation().keys where k.hasPrefix("pin.") {
             UserDefaults.standard.removeObject(forKey: k)
         }
+        UserDefaults.standard.removeObject(forKey: "pins")
     }
 
     /// 確認コード: 指紋の先頭8文字を XXXX-XXXX の形にしたもの(PC側 relay_tls.code() と同じ)。
@@ -43,8 +52,8 @@ enum TLSPin {
     static func check(_ challenge: URLAuthenticationChallenge, host: String) -> Result? {
         guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
               let trust = challenge.protectionSpace.serverTrust, let fp = fingerprint(trust) else { return nil }
-        guard let known = pinned(host) else { return .unknown(fp) }
-        return known == fp ? .ok(URLCredential(trust: trust)) : .mismatch
+        if isTrusted(fp) { return .ok(URLCredential(trust: trust)) }
+        return pinned(host) == nil ? .unknown(fp) : .mismatch
     }
 }
 
